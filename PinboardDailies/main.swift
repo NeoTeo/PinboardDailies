@@ -70,15 +70,18 @@ class PinboardToAlfred {
         let runLoop = NSRunLoop.currentRunLoop()
         let main = PinboardToAlfred()
         
-        var tag = "daily"
+        var tag: String?
         var token: String?
         
         var index = 1
         while index+1 < Int(C_ARGC) {
-            switch (String.fromCString(C_ARGV[index++]), String.fromCString(C_ARGV[index++])) {
-            case let("tag:",value):
-                tag = value
-            case let("token:",value):
+            let key = String.fromCString(C_ARGV[index++])
+            let value = String.fromCString(C_ARGV[index++])
+            if !key || !value { break }
+            switch key! {
+            case "tag:":
+                tag = value ? value : "Daily"
+            case "token:":
                 token = value
             default:
                 break
@@ -86,7 +89,7 @@ class PinboardToAlfred {
         }
         
         if token {
-            main.fetchBookmarks(tag: tag, token: token!)
+            main.fetchBookmarks(tag: tag!, token: token!)
             runLoop.run()
         } else {
             println("Error! No valid token provided.")
