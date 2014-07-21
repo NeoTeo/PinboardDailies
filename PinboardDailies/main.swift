@@ -69,19 +69,15 @@ class PinboardToAlfred {
     func runRun() {
         let runLoop = NSRunLoop.currentRunLoop()
         let main = PinboardToAlfred()
-        
         var tag: String?
         var token: String?
-        
+
         var index = 1
         while index+1 < Int(C_ARGC) {
-            let key = String.fromCString(C_ARGV[index++])
-            let value = String.fromCString(C_ARGV[index++])
-            if !key || !value { break }
-            switch key! {
-            case "tag:":
-                tag = value ? value : "Daily"
-            case "token:":
+            switch (String.fromCString(C_ARGV[index++]),String.fromCString(C_ARGV[index++])) {
+            case (.Some("tag:"), .Some(let value)):
+                tag = value
+            case (.Some("token:"), .Some(let value)):
                 token = value
             default:
                 break
