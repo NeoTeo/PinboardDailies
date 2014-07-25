@@ -41,7 +41,7 @@ class PinboardToAlfred {
                     // Add the child to the root.
                     rootXML.addChild(childXML)
                     
-                    var subChildXML = NSXMLElement(name: "subtitle", stringValue: "test")
+                    var subChildXML = NSXMLElement(name: "subtitle", stringValue: href)
                     childXML.addChild(subChildXML)
                     
                     subChildXML = NSXMLElement(name: "icon")
