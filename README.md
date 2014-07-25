@@ -13,3 +13,7 @@ The usage is:
 
 In Alfred's Workflows you simply add a Script Filter with the above (using your own credentials of course) 
 and flow the output into an Open URL Action.
+
+You should end up with something like this:
+
+![](example.jpg?raw=true "Screenshot of Alfred showing bookmark results.")
