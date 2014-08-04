@@ -84,7 +84,7 @@ class PinboardToAlfred {
             }
         }
         
-        if token {
+        if token != nil {
             main.fetchBookmarks(tag: tag!, token: token!)
             runLoop.run()
         } else {
