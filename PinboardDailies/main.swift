@@ -71,13 +71,13 @@ class PinboardToAlfred {
         let main = PinboardToAlfred()
         var tag: String?
         var token: String?
-
-        var index = 1
-        while index+1 < Int(C_ARGC) {
-            switch (String.fromCString(C_ARGV[index++]),String.fromCString(C_ARGV[index++])) {
-            case (.Some("tag:"), .Some(let value)):
+        
+        // Skip the first index as it is always the application name.
+        for index in stride(from: 1, to: Process.arguments.count-1, by: 2) {
+            switch (Process.arguments[index],Process.arguments[index+1]) {
+            case ("tag:", let value):
                 tag = value
-            case (.Some("token:"), .Some(let value)):
+            case ("token:", let value):
                 token = value
             default:
                 break
