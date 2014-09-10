@@ -12,24 +12,25 @@ import Foundation
 class PinboardToAlfred {
     
     func fetchBookmarks(#tag: String, token: String) {
+
         let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
         let request = NSURLRequest(URL: url)
         let queue = NSOperationQueue()
         
         NSURLConnection.sendAsynchronousRequest(request, queue: queue, completionHandler: {
             (response, data, error) -> Void in
-
+            
             if error != nil {
                 println("Much error. Great bye")
                 println(error)
+                exit(-1)
             } else {
-                
+
                 let json: NSArray = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers, error: nil) as NSArray
                 
                 var rootXML = NSXMLElement(name: "items")
                 
                 for entry: AnyObject in json {
-                    
                     var description     = entry.objectForKey("description") as String
                     var href            = entry.objectForKey("href") as String
                     var childXML        = NSXMLElement(name: "item")
@@ -67,27 +68,32 @@ class PinboardToAlfred {
     }
     
     func runRun() {
-        let runLoop = NSRunLoop.currentRunLoop()
+//        let runLoop = NSRunLoop.currentRunLoop()
         let main = PinboardToAlfred()
         var userToken: String?
         var userTag: String = "daily"
+        let argArray = Process.arguments
 
-        
         // Skip the first index as it is always the application name.
-        for index in stride(from: 1, to: Process.arguments.count-1, by: 2) {
-            switch (Process.arguments[index],Process.arguments[index+1]) {
-            case ("tag:", let value):
-                userTag = value
+        for index in stride(from: 1, to: argArray.count-1, by: 2) {
+            switch (argArray[index],argArray[index+1]) {
+
+            case ("tag:", let tagvalue):
+                userTag = tagvalue
             case ("token:", let value):
                 userToken = value
             default:
                 break
             }
+            // Very odd Swift compiler bug that causes userTag to be overwritten with the userToken value *unless*
+            // there's this call to print (possibly others make it work too) in here!
+            print("")
         }
         
         if userToken != nil {
             main.fetchBookmarks(tag: userTag, token: userToken!)
-            runLoop.run()
+//            runLoop.run()
+            CFRunLoopRun()
         } else {
             println("Error! No valid token provided.")
             println("Usage: PinboardDailies tag: \"daily\" token: \"username:tokendata\"")
