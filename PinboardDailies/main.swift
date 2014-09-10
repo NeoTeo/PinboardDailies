@@ -12,7 +12,7 @@ import Foundation
 class PinboardToAlfred {
     
     func fetchBookmarks(#tag: String, token: String) {
-        let url = NSURL.URLWithString("https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
+        let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
         let request = NSURLRequest(URL: url)
         let queue = NSOperationQueue()
         
@@ -69,23 +69,24 @@ class PinboardToAlfred {
     func runRun() {
         let runLoop = NSRunLoop.currentRunLoop()
         let main = PinboardToAlfred()
-        var tag: String?
-        var token: String?
+        var userToken: String?
+        var userTag: String = "daily"
+
         
         // Skip the first index as it is always the application name.
         for index in stride(from: 1, to: Process.arguments.count-1, by: 2) {
             switch (Process.arguments[index],Process.arguments[index+1]) {
             case ("tag:", let value):
-                tag = value
+                userTag = value
             case ("token:", let value):
-                token = value
+                userToken = value
             default:
                 break
             }
         }
         
-        if token != nil {
-            main.fetchBookmarks(tag: tag!, token: token!)
+        if userToken != nil {
+            main.fetchBookmarks(tag: userTag, token: userToken!)
             runLoop.run()
         } else {
             println("Error! No valid token provided.")
