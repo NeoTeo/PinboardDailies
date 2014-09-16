@@ -14,7 +14,8 @@ class PinboardToAlfred {
     func fetchBookmarks(#tag: String, token: String) {
 
         let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
-        let request = NSURLRequest(URL: url)
+        if url == nil { return }
+        let request = NSURLRequest(URL: url!)
         let queue = NSOperationQueue()
         
         NSURLConnection.sendAsynchronousRequest(request, queue: queue, completionHandler: {
@@ -27,39 +28,44 @@ class PinboardToAlfred {
             } else {
 
                 let json: NSArray = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers, error: nil) as NSArray
+
+                if let rootXML = NSXMLElement(name: "items") {
                 
-                var rootXML = NSXMLElement(name: "items")
-                
-                for entry: AnyObject in json {
-                    var description     = entry.objectForKey("description") as String
-                    var href            = entry.objectForKey("href") as String
-                    var childXML        = NSXMLElement(name: "item")
+                    for entry: AnyObject in json {
+                        var description     = entry.objectForKey("description") as String
+                        var href            = entry.objectForKey("href") as String
+                        
+                        if var childXML = NSXMLElement(name: "item") {
+                        
+                            childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as NSXMLNode)
+                            childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as NSXMLNode)
+                            childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as NSXMLNode)
+                            
+                            // Add the child to the root.
+                            rootXML.addChild(childXML)
+                            
+                            if var subChildXML = NSXMLElement(name: "subtitle", stringValue: href) {
+                                childXML.addChild(subChildXML)
+                            }
+                            
+                            if var subChildXML = NSXMLElement(name: "icon") {
+                                subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as NSXMLNode)
+                                childXML.addChild(subChildXML)
+                            }
+                            
+                            if var subChildXML = NSXMLElement(name: "title", stringValue: description) {
+                                childXML.addChild(subChildXML)
+                            }
+                        }
+                        
+                    }
                     
-                    childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as NSXMLNode)
-                    childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as NSXMLNode)
-                    childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as NSXMLNode)
+                    var alfredDoc = NSXMLDocument(rootElement: rootXML)
+                    alfredDoc.version = "1.0"
+                    alfredDoc.characterEncoding = "UTF-8"
                     
-                    // Add the child to the root.
-                    rootXML.addChild(childXML)
-                    
-                    var subChildXML = NSXMLElement(name: "subtitle", stringValue: href)
-                    childXML.addChild(subChildXML)
-                    
-                    subChildXML = NSXMLElement(name: "icon")
-                    subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as NSXMLNode)
-                    childXML.addChild(subChildXML)
-                    
-                    subChildXML = NSXMLElement(name: "title", stringValue: description)
-                    childXML.addChild(subChildXML)
-                    
+                    println(alfredDoc.XMLString)
                 }
-                
-                var alfredDoc = NSXMLDocument(rootElement: rootXML)
-                alfredDoc.version = "1.0"
-                alfredDoc.characterEncoding = "UTF-8"
-                
-                println(alfredDoc.XMLString)
-                
                 // Write it out to disk
                 //alfredDoc.XMLData.writeToFile("/Users/teo/tmp/test.xml", atomically: true)
                 exit(0)
