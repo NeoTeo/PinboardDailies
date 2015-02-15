@@ -14,47 +14,51 @@ class PinboardToAlfred {
     func fetchBookmarks(#tag: String, token: String) {
 
         let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
-        if url == nil { return }
         let request = NSURLRequest(URL: url!)
         let queue = NSOperationQueue()
         
         NSURLConnection.sendAsynchronousRequest(request, queue: queue, completionHandler: {
-            (response, data, error) -> Void in
+            (response: NSURLResponse?, data: NSData?, urlError: NSError?) -> Void in
             
-            if error != nil {
+            if urlError != nil {
                 println("Much error. Great bye")
-                println(error)
+                NSLog("ERROR: %@",urlError!)
                 exit(-1)
             } else {
+                var anError: NSError?
 
-                let json: NSArray = NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions.MutableContainers, error: nil) as NSArray
-
+                // Parse the data into an array of string : anyobject dictionaries.
+                let json = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers, error: &anError) as? [[String : AnyObject]]
+                if json == nil { println(anError) ; exit(-1) }
                 let rootXML = NSXMLElement(name: "items")
                 
-                for entry: AnyObject in json {
-                    var description     = entry.objectForKey("description") as String
-                    var href            = entry.objectForKey("href") as String
+                // traverse the data and turn it into an XML format Alfred understands.
+                for entry in json! {
+                    if let
+                        description     = entry["description"] as? String,
+                        href            = entry["href"] as? String
+                    {
+                        var childXML = NSXMLElement(name: "item")
+                        
+                        childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as! NSXMLNode)
+                        childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as! NSXMLNode)
+                        childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as! NSXMLNode)
+                        
+                        // Add the child to the root.
+                        rootXML.addChild(childXML)
+                        
+                        var subChildXML = NSXMLElement(name: "subtitle", stringValue: href)
+                        childXML.addChild(subChildXML)
+                        
+                        
+                        subChildXML = NSXMLElement(name: "icon")
+                        subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as! NSXMLNode)
+                        childXML.addChild(subChildXML)
                     
-                    var childXML = NSXMLElement(name: "item")
-                    
-                    childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as NSXMLNode)
-                    childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as NSXMLNode)
-                    childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as NSXMLNode)
-                    
-                    // Add the child to the root.
-                    rootXML.addChild(childXML)
-                    
-                    var subChildXML = NSXMLElement(name: "subtitle", stringValue: href)
-                    childXML.addChild(subChildXML)
-                    
-                    
-                    subChildXML = NSXMLElement(name: "icon")
-                    subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as NSXMLNode)
-                    childXML.addChild(subChildXML)
-                
-                    
-                    subChildXML = NSXMLElement(name: "title", stringValue: description)
-                    childXML.addChild(subChildXML)
+                        
+                        subChildXML = NSXMLElement(name: "title", stringValue: description)
+                        childXML.addChild(subChildXML)
+                    }
                     
                 }
                 
@@ -70,6 +74,7 @@ class PinboardToAlfred {
             }
         })
     }
+    
     
     func runRun() {
 
