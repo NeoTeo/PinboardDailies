@@ -11,7 +11,12 @@ import Foundation
 
 class PinboardToAlfred {
     
-    func fetchBookmarks(#tag: String, token: String) {
+    enum FetchMode: Int {
+        case display = 0
+        case silent
+    }
+    
+    func fetchBookmarks(#tag: String, token: String, mode: FetchMode ) {
 
         let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
         let request = NSURLRequest(URL: url!)
@@ -66,15 +71,24 @@ class PinboardToAlfred {
                 alfredDoc.version = "1.0"
                 alfredDoc.characterEncoding = "UTF-8"
                 
-                println(alfredDoc.XMLString)
+                if mode == .display {
+                    println(alfredDoc.XMLString)
+                }
                 
-                // Write it out to disk
-                //alfredDoc.XMLData.writeToFile("/Users/teo/tmp/test.xml", atomically: true)
+                // Write it out to disk (just the dailies for now)
+                if tag == "Daily" {
+                    alfredDoc.XMLData.writeToFile("/Users/teo/tmp/cachedDailiesXML.xml", atomically: true)
+                }
                 exit(0)
             }
         })
     }
     
+    func checkForCachedXML(cachedXMLURL: NSURL) -> NSXMLDocument? {
+        var error: NSError?
+        let cachedXML = NSXMLDocument(contentsOfURL: cachedXMLURL, options: Int(NSXMLDocumentContentKind.XMLKind.rawValue), error: &error)
+        return cachedXML
+    }
     
     func runRun() {
 
@@ -101,8 +115,19 @@ class PinboardToAlfred {
         }
 
         if userToken != nil {
-            main.fetchBookmarks(tag: userTag, token: userToken!)
-
+            // By default the fetchBookmarks display the bookmarks it finds
+            var fetchMode = FetchMode.display
+            
+            // But if we already have a cache, there's no need to display the bookmarks we fetch below.
+            if userTag == "daily" {
+                if let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/Users/teo/tmp/cachedDailiesXML.xml")!) {
+                println(cachedXML)
+                fetchMode = .silent
+                }
+            }
+            
+            main.fetchBookmarks(tag: userTag, token: userToken!, mode: fetchMode)
+            
             CFRunLoopRun()
         } else {
             println("Error! No valid token provided.")
