@@ -29,58 +29,59 @@ class PinboardToAlfred {
                 println("Much error. Great bye")
                 NSLog("ERROR: %@",urlError!)
                 exit(-1)
-            } else {
-                var anError: NSError?
-
-                // Parse the data into an array of string : anyobject dictionaries.
-                let json = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers, error: &anError) as? [[String : AnyObject]]
-                if json == nil { println(anError) ; exit(-1) }
-                let rootXML = NSXMLElement(name: "items")
-                
-                // traverse the data and turn it into an XML format Alfred understands.
-                for entry in json! {
-                    if let
-                        description     = entry["description"] as? String,
-                        href            = entry["href"] as? String
-                    {
-                        var childXML = NSXMLElement(name: "item")
-                        
-                        childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as! NSXMLNode)
-                        childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as! NSXMLNode)
-                        childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as! NSXMLNode)
-                        
-                        // Add the child to the root.
-                        rootXML.addChild(childXML)
-                        
-                        var subChildXML = NSXMLElement(name: "subtitle", stringValue: href)
-                        childXML.addChild(subChildXML)
-                        
-                        
-                        subChildXML = NSXMLElement(name: "icon")
-                        subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as! NSXMLNode)
-                        childXML.addChild(subChildXML)
-                    
-                        
-                        subChildXML = NSXMLElement(name: "title", stringValue: description)
-                        childXML.addChild(subChildXML)
-                    }
-                    
-                }
-                
-                var alfredDoc = NSXMLDocument(rootElement: rootXML)
-                alfredDoc.version = "1.0"
-                alfredDoc.characterEncoding = "UTF-8"
-                
-                if mode == .display {
-                    println(alfredDoc.XMLString)
-                }
-                
-                // Write it out to disk (just the dailies for now)
-                if tag == "Daily" {
-                    alfredDoc.XMLData.writeToFile("/Users/teo/tmp/cachedDailiesXML.xml", atomically: true)
-                }
-                exit(0)
             }
+            
+            var anError: NSError?
+
+            // Parse the data into an array of string : anyobject dictionaries.
+            let json = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers, error: &anError) as? [[String : AnyObject]]
+            if json == nil { println(anError) ; exit(-1) }
+            let rootXML = NSXMLElement(name: "items")
+            
+            // traverse the data and turn it into an XML format Alfred understands.
+            for entry in json! {
+                if let
+                    description     = entry["description"] as? String,
+                    href            = entry["href"] as? String
+                {
+                    var childXML = NSXMLElement(name: "item")
+                    
+                    childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as! NSXMLNode)
+                    childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as! NSXMLNode)
+                    childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as! NSXMLNode)
+                    
+                    // Add the child to the root.
+                    rootXML.addChild(childXML)
+                    
+                    var subChildXML = NSXMLElement(name: "subtitle", stringValue: href)
+                    childXML.addChild(subChildXML)
+                    
+                    
+                    subChildXML = NSXMLElement(name: "icon")
+                    subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as! NSXMLNode)
+                    childXML.addChild(subChildXML)
+                
+                    
+                    subChildXML = NSXMLElement(name: "title", stringValue: description)
+                    childXML.addChild(subChildXML)
+                }
+                
+            }
+            
+            var alfredDoc = NSXMLDocument(rootElement: rootXML)
+            alfredDoc.version = "1.0"
+            alfredDoc.characterEncoding = "UTF-8"
+            
+            if mode == .display {
+                println(alfredDoc.XMLString)
+            }
+            
+            // Write it out to disk (just the dailies for now)
+            if tag == "daily" {
+                alfredDoc.XMLData.writeToFile("/Users/teo/tmp/cachedDailiesXML.xml", atomically: true)
+            }
+            exit(0)
+        
         })
     }
     
