@@ -16,7 +16,7 @@ class PinboardToAlfred {
         case silent
     }
     
-    func fetchBookmarks(#tag: String, token: String, mode: FetchMode ) {
+    func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
 
         let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
         let request = NSURLRequest(URL: url!)
@@ -26,16 +26,14 @@ class PinboardToAlfred {
             (response: NSURLResponse?, data: NSData?, urlError: NSError?) -> Void in
             
             if urlError != nil {
-                println("Much error. Great bye")
+                print("Much error. Great bye")
                 NSLog("ERROR: %@",urlError!)
                 exit(-1)
             }
-            
-            var anError: NSError?
 
             // Parse the data into an array of string : anyobject dictionaries.
-            let json = NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers, error: &anError) as? [[String : AnyObject]]
-            if json == nil { println(anError) ; exit(-1) }
+            let json = try! NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers) as? [[String : AnyObject]]
+
             let rootXML = NSXMLElement(name: "items")
             
             // traverse the data and turn it into an XML format Alfred understands.
@@ -44,7 +42,7 @@ class PinboardToAlfred {
                     description     = entry["description"] as? String,
                     href            = entry["href"] as? String
                 {
-                    var childXML = NSXMLElement(name: "item")
+                    let childXML = NSXMLElement(name: "item")
                     
                     childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as! NSXMLNode)
                     childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as! NSXMLNode)
@@ -68,12 +66,12 @@ class PinboardToAlfred {
                 
             }
             
-            var alfredDoc = NSXMLDocument(rootElement: rootXML)
+            let alfredDoc = NSXMLDocument(rootElement: rootXML)
             alfredDoc.version = "1.0"
             alfredDoc.characterEncoding = "UTF-8"
             
             if mode == .display {
-                println(alfredDoc.XMLString)
+                print(alfredDoc.XMLString)
             }
             
             // Write it out to disk (just the dailies for now)
@@ -86,9 +84,13 @@ class PinboardToAlfred {
     }
     
     func checkForCachedXML(cachedXMLURL: NSURL) -> NSXMLDocument? {
-        var error: NSError?
-        let cachedXML = NSXMLDocument(contentsOfURL: cachedXMLURL, options: Int(NSXMLDocumentContentKind.XMLKind.rawValue), error: &error)
-        return cachedXML
+        do {
+            let cachedXML: NSXMLDocument? = try NSXMLDocument(contentsOfURL: cachedXMLURL, options: Int(NSXMLDocumentContentKind.XMLKind.rawValue))
+            return cachedXML
+        } catch {
+            print(error)
+            return nil
+        }
     }
     
     func runRun() {
@@ -120,19 +122,18 @@ class PinboardToAlfred {
             var fetchMode = FetchMode.display
             
             // But if we already have a cache, there's no need to display the bookmarks we fetch below.
-            if userTag == "daily" {
-                if let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/Users/teo/tmp/cachedDailiesXML.xml")!) {
-                println(cachedXML)
-                fetchMode = .silent
-                }
+            if userTag == "daily",
+                let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/Users/teo/tmp/cachedDailiesXML.xml")) {
+                    print(cachedXML)
+                    fetchMode = .silent
             }
             
             main.fetchBookmarks(tag: userTag, token: userToken!, mode: fetchMode)
             
             CFRunLoopRun()
         } else {
-            println("Error! No valid token provided.")
-            println("Usage: PinboardDailies tag: \"daily\" token: \"username:tokendata\"")
+            print("Error! No valid token provided.")
+            print("Usage: PinboardDailies tag: \"daily\" token: \"username:tokendata\"")
         }
     }
 }
