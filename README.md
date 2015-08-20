@@ -1,11 +1,11 @@
 PinboardDailies
 ===============
 
-An OS X command line app to fetch your bookmarks tagged "daily" and format them for Alfred's Script Filter.
+An OS X command line app to fetch your bookmarks (defaults to those tagged "daily") and format them for Alfred's Script Filter.
 PinboardDailies fetches the bookmarks tagged with daily from api.pinboard.in and returns the results 
 in the xml format that Alfred can parse into a results list. 
 
-Although the utility defaults to your dailies it does take a tag argument that allows you to fetch whatever tag you want.
+Although the utility defaults to your dailies it will use a tag argument that allows you to fetch whatever tag you want.
 
 The usage is:
 
