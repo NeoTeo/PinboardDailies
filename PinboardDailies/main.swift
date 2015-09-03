@@ -103,7 +103,7 @@ class PinboardToAlfred {
         if argArray.count < 3 { exit(0) }
         
         // Skip the first index as it is always the application name.
-        for index in stride(from: 1, through: argArray.count-1, by: 2) {
+        for index in 1.stride(through: argArray.count-1, by: 2) {
             switch (argArray[index], argArray[index+1]) {
 
                 case ("tag:", let value):
