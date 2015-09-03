@@ -18,9 +18,9 @@ class PinboardToAlfred {
     
     func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
 
-        let url = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
+        let url     = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
         let request = NSURLRequest(URL: url!)
-        let queue = NSOperationQueue()
+        let queue   = NSOperationQueue()
         
         NSURLConnection.sendAsynchronousRequest(request, queue: queue, completionHandler: {
             (response: NSURLResponse?, data: NSData?, urlError: NSError?) -> Void in
@@ -32,8 +32,7 @@ class PinboardToAlfred {
             }
 
             // Parse the data into an array of string : anyobject dictionaries.
-            let json = try! NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers) as? [[String : AnyObject]]
-
+            let json    = try! NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers) as? [[String : AnyObject]]
             let rootXML = NSXMLElement(name: "items")
             
             // traverse the data and turn it into an XML format Alfred understands.
@@ -44,9 +43,9 @@ class PinboardToAlfred {
                 {
                     let childXML = NSXMLElement(name: "item")
                     
-                    childXML.addAttribute(NSXMLNode.attributeWithName("arg", stringValue: href) as! NSXMLNode)
-                    childXML.addAttribute(NSXMLNode.attributeWithName("valid", stringValue: "YES") as! NSXMLNode)
-                    childXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "file") as! NSXMLNode)
+                    childXML.addAttribute(NSXMLNode.attributeWithName("arg"     , stringValue:   href) as! NSXMLNode)
+                    childXML.addAttribute(NSXMLNode.attributeWithName("valid"   , stringValue:  "YES") as! NSXMLNode)
+                    childXML.addAttribute(NSXMLNode.attributeWithName("type"    , stringValue: "file") as! NSXMLNode)
                     
                     // Add the child to the root.
                     rootXML.addChild(childXML)
@@ -66,8 +65,8 @@ class PinboardToAlfred {
                 
             }
             
-            let alfredDoc = NSXMLDocument(rootElement: rootXML)
-            alfredDoc.version = "1.0"
+            let alfredDoc               = NSXMLDocument(rootElement: rootXML)
+            alfredDoc.version           = "1.0"
             alfredDoc.characterEncoding = "UTF-8"
             
             if mode == .display {
@@ -84,9 +83,11 @@ class PinboardToAlfred {
     }
     
     func checkForCachedXML(cachedXMLURL: NSURL) -> NSXMLDocument? {
+        
         do {
             let cachedXML: NSXMLDocument? = try NSXMLDocument(contentsOfURL: cachedXMLURL, options: Int(NSXMLDocumentContentKind.XMLKind.rawValue))
             return cachedXML
+            
         } catch {
             print(error)
             return nil
@@ -95,9 +96,9 @@ class PinboardToAlfred {
     
     func runRun() {
 
-        let main = PinboardToAlfred()
         var userToken: String?
-        var userTag: String = "daily"
+        let main     = PinboardToAlfred()
+        var userTag  = "daily"
         let argArray = Process.arguments as [String]
         
         if argArray.count < 3 { exit(0) }
@@ -122,7 +123,7 @@ class PinboardToAlfred {
             var fetchMode = FetchMode.display
             
             // But if we already have a cache, there's no need to display the bookmarks we fetch below.
-            if userTag == "daily",
+            if userTag.lowercaseString == "daily",
                 let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/Users/teo/tmp/cachedDailiesXML.xml")) {
                     print(cachedXML)
                     fetchMode = .silent
