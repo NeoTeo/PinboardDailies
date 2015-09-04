@@ -16,4 +16,5 @@ and flow the output into an Open URL Action.
 
 You should end up with something like this:
 
-![](example.jpg?raw=true "Screenshot of Alfred showing bookmark results.")
+![](ShowPD.gif?raw=true "Screenshot of Alfred showing Pinboard Dailies.")
+![](ShowPB.gif?raw=true "Screenshot of Alfred showing Pinboard tag search.")
