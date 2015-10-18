@@ -71,7 +71,7 @@ func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
         
         // Write it out to disk (just the dailies for now)
         if tag == "daily" {
-            alfredDoc.XMLData.writeToFile("/Users/teo/tmp/cachedDailiesXML.xml", atomically: true)
+            alfredDoc.XMLData.writeToFile("/tmp/cachedDailiesXML.xml", atomically: true)
         }
         exit(0)
     
@@ -121,7 +121,7 @@ func runRun() {
         
         // But if we already have a cache, there's no need to display the bookmarks we fetch below.
         if userTag.lowercaseString == "daily",
-            let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/Users/teo/tmp/cachedDailiesXML.xml")) {
+            let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/tmp/cachedDailiesXML.xml")) {
                 print(cachedXML)
                 fetchMode = .silent
         }
