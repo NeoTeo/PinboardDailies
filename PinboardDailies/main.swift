@@ -13,12 +13,12 @@ enum FetchMode: Int {
     case silent
 }
 
-func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
+func fetchBookmarks(tag: String, token: String, mode: FetchMode ) {
 
     let url     = NSURL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
-    let request = NSURLRequest(URL: url!)
+    let request = NSURLRequest(url: url!)
 
-    let task = NSURLSession.sharedSession().dataTaskWithRequest(request) {
+    let task = NSURLSession.shared().dataTask(with: request) {
         (data: NSData?, response: NSURLResponse?, urlError: NSError?) -> Void in
         
         if urlError != nil {
@@ -28,7 +28,7 @@ func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
         }
 
         // Parse the data into an array of string : anyobject dictionaries.
-        let json    = try! NSJSONSerialization.JSONObjectWithData(data!, options: NSJSONReadingOptions.MutableContainers) as? [[String : AnyObject]]
+        let json    = try! NSJSONSerialization.jsonObject(with: data!, options: NSJSONReadingOptions.mutableContainers) as? [[String : AnyObject]]
         let rootXML = NSXMLElement(name: "items")
         
         // traverse the data and turn it into an XML format Alfred understands.
@@ -39,9 +39,9 @@ func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
             {
                 let childXML = NSXMLElement(name: "item")
                 
-                childXML.addAttribute(NSXMLNode.attributeWithName("arg"     , stringValue:   href) as! NSXMLNode)
-                childXML.addAttribute(NSXMLNode.attributeWithName("valid"   , stringValue:  "YES") as! NSXMLNode)
-                childXML.addAttribute(NSXMLNode.attributeWithName("type"    , stringValue: "file") as! NSXMLNode)
+                childXML.addAttribute(NSXMLNode.attribute(withName: "arg"     , stringValue:   href) as! NSXMLNode)
+                childXML.addAttribute(NSXMLNode.attribute(withName: "valid"   , stringValue:  "YES") as! NSXMLNode)
+                childXML.addAttribute(NSXMLNode.attribute(withName: "type"    , stringValue: "file") as! NSXMLNode)
                 
                 // Add the child to the root.
                 rootXML.addChild(childXML)
@@ -51,7 +51,7 @@ func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
                 
                 
                 subChildXML = NSXMLElement(name: "icon")
-                subChildXML.addAttribute(NSXMLNode.attributeWithName("type", stringValue: "fileicon") as! NSXMLNode)
+                subChildXML.addAttribute(NSXMLNode.attribute(withName: "type", stringValue: "fileicon") as! NSXMLNode)
                 childXML.addChild(subChildXML)
             
                 
@@ -66,12 +66,12 @@ func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
         alfredDoc.characterEncoding = "UTF-8"
         
         if mode == .display {
-            print(alfredDoc.XMLString)
+            print(alfredDoc.xmlString)
         }
         
         // Write it out to disk (just the dailies for now)
         if tag == "daily" {
-            alfredDoc.XMLData.writeToFile("/tmp/cachedDailiesXML.xml", atomically: true)
+            alfredDoc.xmlData.write(toFile: "/tmp/cachedDailiesXML.xml", atomically: true)
         }
         exit(0)
     
@@ -83,7 +83,7 @@ func fetchBookmarks(tag tag: String, token: String, mode: FetchMode ) {
 func checkForCachedXML(cachedXMLURL: NSURL) -> NSXMLDocument? {
     
     do {
-        let cachedXML: NSXMLDocument? = try NSXMLDocument(contentsOfURL: cachedXMLURL, options: Int(NSXMLDocumentContentKind.XMLKind.rawValue))
+        let cachedXML: NSXMLDocument? = try NSXMLDocument(contentsOf: cachedXMLURL, options: Int(NSXMLDocumentContentKind.xmlKind.rawValue))
         return cachedXML
         
     } catch {
@@ -101,7 +101,7 @@ func runRun() {
     if argArray.count < 3 { exit(0) }
     
     // Skip the first index as it is always the application name.
-    for index in 1.stride(through: argArray.count-1, by: 2) {
+    for index in stride(from:1, through: argArray.count-1, by: 2) {
         switch (argArray[index], argArray[index+1]) {
 
             case ("tag:", let value):
@@ -120,8 +120,8 @@ func runRun() {
         var fetchMode = FetchMode.display
         
         // But if we already have a cache, there's no need to display the bookmarks we fetch below.
-        if userTag.lowercaseString == "daily",
-            let cachedXML = checkForCachedXML(NSURL(fileURLWithPath: "/tmp/cachedDailiesXML.xml")) {
+        if userTag.lowercased() == "daily",
+            let cachedXML = checkForCachedXML(cachedXMLURL: NSURL(fileURLWithPath: "/tmp/cachedDailiesXML.xml")) {
                 print(cachedXML)
                 fetchMode = .silent
         }
