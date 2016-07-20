@@ -18,7 +18,7 @@ func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
     let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
     let request = URLRequest(url: url!)
 
-    let task = URLSession.shared().dataTask(with: request) {
+    let task = URLSession.shared.dataTask(with: request) {
         (data: Data?, response: URLResponse?, urlError: NSError?) -> Void in
         
         guard urlError == nil else {
@@ -33,7 +33,7 @@ func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
         // traverse the data and turn it into an XML format Alfred understands.
         for entry in json! {
             
-            guard let description = entry["description"] as? String, href = entry["href"] as? String
+            guard let description = entry["description"] as? String, let href = entry["href"] as? String
             else { continue }
             
             let childXML = XMLElement(name: "item")
@@ -69,7 +69,7 @@ func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
         }
         
         // Write it out to disk (just the dailies for now)
-        if let url = URL(string: "file://"+NSHomeDirectory()+"/tmp/cachedDailiesXML.xml") where tag == "daily" {
+        if let url = URL(string: "file://"+NSHomeDirectory()+"/tmp/cachedDailiesXML.xml"), tag == "daily" {
             do {
                 try alfredDoc.xmlData.write(to: url, options: NSData.WritingOptions.atomicWrite)
             } catch {
