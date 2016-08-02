@@ -19,7 +19,7 @@ func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
     let request = URLRequest(url: url!)
 
     let task = URLSession.shared.dataTask(with: request) {
-        (data: Data?, response: URLResponse?, urlError: NSError?) -> Void in
+        (data: Data?, response: URLResponse?, urlError: Error?) -> Void in
         
         guard urlError == nil else {
             print("Much error. Great bye. \(urlError)")
