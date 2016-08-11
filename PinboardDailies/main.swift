@@ -11,6 +11,7 @@ import Foundation
 enum FetchMode: Int {
     case display = 0
     case silent
+    case fetchOnly
 }
 
 func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
@@ -101,27 +102,58 @@ func runRun() {
     var userTag  = "daily"
     let argArray = Process.arguments as [String]
     
+    let minQueryInterval: Double = 300.0
+    let accessCache = UserDefaults.standard
+
+    // By default the fetchBookmarks displays the bookmarks it finds
+    var fetchMode = FetchMode.display
+
+
+    
+    /// This should give some kind of helpful output instead of just exiting.
     if argArray.count < 3 { exit(0) }
     
     // Skip the first index as it is always the application name.
     for index in stride(from:1, through: argArray.count-1, by: 2) {
         switch (argArray[index], argArray[index+1]) {
 
-            case ("tag:", let value):
-                userTag = value
-            
-            case ("token:", let value):
-                userToken = value
-            
-            default:
-                break
+        case ("mode:", let mode):
+            if mode == "fetch" {
+                fetchMode = .fetchOnly
+            } else {
+                fetchMode = .display
+            }
+            break
+        case ("tag:", let value):
+            userTag = value
+        
+        case ("token:", let value):
+            userToken = value
+        
+        default:
+            break
         }
     }
-
+    
     if userToken != nil {
-        // By default the fetchBookmarks display the bookmarks it finds
-        var fetchMode = FetchMode.display
-        
+
+        /// tmp bodge
+        if fetchMode == .fetchOnly {
+            
+            /// Ensure we don't spam Pinboard with requests
+            if let lastCacheDate = accessCache.object(forKey: "lastCache") as? Date {
+                let delta = Date().timeIntervalSince(lastCacheDate)
+                if delta < minQueryInterval { exit(0) }
+            }
+
+            fetchBookmarks(with: userTag, token: userToken!, mode: .silent)
+            
+            accessCache.setValue(Date(), forKey: "lastCache")
+            
+            CFRunLoopRun()
+            return
+        }
+
         // But if we already have a cache, there's no need to display the bookmarks we fetch below.
         if userTag.lowercased() == "daily",
             let cachedXML = checkForCachedXML(URL(fileURLWithPath: NSHomeDirectory()+"/tmp/cachedDailiesXML.xml")) {
@@ -130,9 +162,11 @@ func runRun() {
         
         }
 
-        fetchBookmarks(with: userTag, token: userToken!, mode: fetchMode)
+//        fetchBookmarks(with: userTag, token: userToken!, mode: fetchMode)
         
-        CFRunLoopRun()
+        /// Store the time we last cached the results.
+//        accessCache.setValue(Date(), forKey: "lastCache")
+//        CFRunLoopRun()
     } else {
         print("Error! No valid token provided.")
         print("Usage: PinboardDailies tag: \"daily\" token: \"username:tokendata\"")
