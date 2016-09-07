@@ -70,7 +70,8 @@ func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
         }
         
         // Write it out to disk (just the dailies for now)
-        if let url = URL(string: "file://"+NSHomeDirectory()+"/tmp/cachedDailiesXML.xml"), tag == "daily" {
+//        if let url = URL(string: "file://"+NSHomeDirectory()+"/tmp/cachedDailiesXML.xml"), tag == "daily" {
+        if let url = URL(string: "file://"+NSTemporaryDirectory()+"cached\(tag)XML.xml") {
             do {
                 try alfredDoc.xmlData.write(to: url, options: NSData.WritingOptions.atomicWrite)
             } catch {
@@ -96,81 +97,83 @@ func checkForCachedXML(_ cachedXMLURL: URL) -> XMLDocument? {
     }
 }
 
-func runRun() {
+enum ArgType {
+    case Mode
+    case Tag
+    case Token
+}
 
-    var userToken: String?
-    var userTag  = "daily"
-    let argArray = Process.arguments as [String]
+func parseArgs(args: [String]) -> [ArgType : String] {
+
+    var parsedArgs = [ArgType : String]()
     
-    let minQueryInterval: Double = 300.0
-    let accessCache = UserDefaults.standard
-
-    // By default the fetchBookmarks displays the bookmarks it finds
-    var fetchMode = FetchMode.display
-
-
+    guard args.count >= 2 else {
+        printUsage(error: "Incorrect number of arguments.")
+        exit(-1)
+    }
     
-    /// This should give some kind of helpful output instead of just exiting.
-    if argArray.count < 3 { exit(0) }
-    
-    // Skip the first index as it is always the application name.
-    for index in stride(from:1, through: argArray.count-1, by: 2) {
-        switch (argArray[index], argArray[index+1]) {
-
-        case ("mode:", let mode):
-            if mode == "fetch" {
-                fetchMode = .fetchOnly
-            } else {
-                fetchMode = .display
-            }
-            break
-        case ("tag:", let value):
-            userTag = value
+    /// Traverse args, skipping the command name.
+    for idx in 1..<args.count {
         
-        case ("token:", let value):
-            userToken = value
+        let arg = args[idx]
+        /// split the arg name from the value. 
+        /// The requirement is that they are separated by =
+        let keyVal = arg.components(separatedBy: "=")
+        guard keyVal.count == 2 else { printUsage(error: "Incorrect argument format.") ; exit(-1) }
+        let val = keyVal[1]
         
+        switch keyVal[0].lowercased() {
+        case "--mode":
+            parsedArgs[.Mode] = val
+        case "--tag":
+            parsedArgs[.Tag] = val
+        case "--token":
+            parsedArgs[.Token] = val
         default:
-            break
+            printUsage(error: "Argument parse error.")
+            exit(-1)
         }
     }
     
-    if userToken != nil {
+    return parsedArgs
+}
 
-        /// tmp bodge
-        if fetchMode == .fetchOnly {
-            
-            /// Ensure we don't spam Pinboard with requests
-            if let lastCacheDate = accessCache.object(forKey: "lastCache") as? Date {
-                let delta = Date().timeIntervalSince(lastCacheDate)
-                if delta < minQueryInterval { exit(0) }
-            }
+func printUsage(error: String) {
+    print("Error: \(error)")
+    print("Usage: pinboardDailies <--token=usertoken> [--mode=fetch|display] [--tag=sometag]")
+}
 
-            fetchBookmarks(with: userTag, token: userToken!, mode: .silent)
-            
-            accessCache.setValue(Date(), forKey: "lastCache")
-            
-            CFRunLoopRun()
-            return
-        }
-
-        // But if we already have a cache, there's no need to display the bookmarks we fetch below.
-        if userTag.lowercased() == "daily",
-            let cachedXML = checkForCachedXML(URL(fileURLWithPath: NSHomeDirectory()+"/tmp/cachedDailiesXML.xml")) {
-                print(cachedXML)
-                fetchMode = .silent
+func main() {
+    let argArray = CommandLine.arguments as [String]
+    let parsedArgs = parseArgs(args: argArray)
+    
+    guard let token = parsedArgs[.Token] else { printUsage(error: "Missing token.") ; exit(-1) }
+    
+    let userTag = parsedArgs[.Tag] ?? "daily"
+    
+    if let mode = parsedArgs[.Mode], mode == "fetch" {
         
-        }
+        let minQueryInterval: Double = 300.0
+        let accessCache = UserDefaults.standard
 
-//        fetchBookmarks(with: userTag, token: userToken!, mode: fetchMode)
+        /// Ensure we don't spam Pinboard with requests
+        if let lastCacheDate = accessCache.object(forKey: "lastCache") as? Date {
+            let delta = Date().timeIntervalSince(lastCacheDate)
+            if delta < minQueryInterval { print("Exceeded request quota. Next valid request in \(minQueryInterval-delta) seconds.") ; exit(0) }
+        }
         
-        /// Store the time we last cached the results.
-//        accessCache.setValue(Date(), forKey: "lastCache")
-//        CFRunLoopRun()
+        fetchBookmarks(with: userTag, token: token, mode: .silent)
+        
+        accessCache.setValue(Date(), forKey: "lastCache")
+        
+        /// This keeps the app running until fetchBookmarks exits explicitly.
+        CFRunLoopRun()
     } else {
-        print("Error! No valid token provided.")
-        print("Usage: PinboardDailies tag: \"daily\" token: \"username:tokendata\"")
+        // But if we already have a cache, there's no need to display the bookmarks we fetch below.
+         if let cachedXML = checkForCachedXML(URL(fileURLWithPath: NSTemporaryDirectory()+"cached\(userTag)XML.xml")) {
+            print(cachedXML)
+        }
     }
 }
 
-runRun()
+main()
