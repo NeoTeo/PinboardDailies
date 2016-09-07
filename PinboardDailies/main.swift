@@ -129,10 +129,10 @@ func printUsage(error: String) {
     print("Usage: pinboardDailies <--token=usertoken> [--mode=fetch|display|uncached] [--tag=sometag]")
 }
 
-func fetchWithQuota(tag: String, token: String, handler: @escaping (XMLDocument)->()) {
+func fetch(quota: Double, tag: String, token: String, handler: @escaping (XMLDocument)->()) {
     
     /// set the query interval to five minutes 60*5 = 300
-    let minQueryInterval: Double = 300.0
+    let minQueryInterval: Double = quota//300.0
     let accessCache = UserDefaults.standard
     
     /// Ensure we don't spam Pinboard with requests
@@ -172,7 +172,7 @@ func main() {
 
     /// This case fetches and then displays the fetched. No cache is used.
     case .some("uncached"):
-        fetchWithQuota(tag: userTag, token: token ) { (alfredDoc: XMLDocument) in
+        fetch(quota: 0.5, tag: userTag, token: token ) { (alfredDoc: XMLDocument) in
             
             storeXml(in: alfredDoc, tag: userTag)
             
@@ -183,7 +183,7 @@ func main() {
         
     /// This case updates the cache by fetching and saving without outputting. Can be slow.
     case .some("fetch"):
-        fetchWithQuota(tag: userTag, token: token) { (alfredDoc: XMLDocument) in
+        fetch(quota: 300.0, tag: userTag, token: token) { (alfredDoc: XMLDocument) in
             
             storeXml(in: alfredDoc, tag: userTag)
             exit(0)
