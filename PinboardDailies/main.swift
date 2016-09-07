@@ -8,13 +8,18 @@
 
 import Foundation
 
-enum FetchMode: Int {
-    case display = 0
-    case silent
-    case fetchOnly
+enum ArgType {
+    case Mode
+    case Tag
+    case Token
 }
 
-func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
+enum OutputMode: Int {
+    case display = 0
+    case silent
+}
+
+func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocument) -> () ) {
 
     let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
     let request = URLRequest(url: url!)
@@ -65,21 +70,7 @@ func fetchBookmarks(with tag: String, token: String, mode: FetchMode ) {
         alfredDoc.version           = "1.0"
         alfredDoc.characterEncoding = "UTF-8"
         
-        if mode == .display {
-            print(alfredDoc.xmlString)
-        }
-        
-        // Write it out to disk (just the dailies for now)
-//        if let url = URL(string: "file://"+NSHomeDirectory()+"/tmp/cachedDailiesXML.xml"), tag == "daily" {
-        if let url = URL(string: "file://"+NSTemporaryDirectory()+"cached\(tag)XML.xml") {
-            do {
-                try alfredDoc.xmlData.write(to: url, options: NSData.WritingOptions.atomicWrite)
-            } catch {
-                print("Error \(error) writing XML data. Exiting.")
-            }
-        }
-        exit(0)
-    
+        handler(alfredDoc)
     }
     
     task.resume()
@@ -97,11 +88,6 @@ func checkForCachedXML(_ cachedXMLURL: URL) -> XMLDocument? {
     }
 }
 
-enum ArgType {
-    case Mode
-    case Tag
-    case Token
-}
 
 func parseArgs(args: [String]) -> [ArgType : String] {
 
@@ -140,7 +126,38 @@ func parseArgs(args: [String]) -> [ArgType : String] {
 
 func printUsage(error: String) {
     print("Error: \(error)")
-    print("Usage: pinboardDailies <--token=usertoken> [--mode=fetch|display] [--tag=sometag]")
+    print("Usage: pinboardDailies <--token=usertoken> [--mode=fetch|display|uncached] [--tag=sometag]")
+}
+
+func fetchWithQuota(tag: String, token: String, handler: @escaping (XMLDocument)->()) {
+    
+    /// set the query interval to five minutes 60*5 = 300
+    let minQueryInterval: Double = 300.0
+    let accessCache = UserDefaults.standard
+    
+    /// Ensure we don't spam Pinboard with requests
+    if let lastCacheDate = accessCache.object(forKey: "lastCache") as? Date {
+        let delta = Date().timeIntervalSince(lastCacheDate)
+        if delta < minQueryInterval { print("Exceeded request quota. Next valid request in \(minQueryInterval-delta) seconds.") ; exit(0) }
+    }
+    
+    fetchBookmarks(with: tag, token: token, handler: handler)
+    
+    accessCache.setValue(Date(), forKey: "lastCache")
+    
+    /// This keeps the app running until fetchBookmarks exits explicitly.
+    CFRunLoopRun()
+}
+
+func storeXml(in doc: XMLDocument, tag: String) {
+    // Write it out to disk
+    if let url = URL(string: "file://"+NSTemporaryDirectory()+"cached\(tag)XML.xml") {
+        do {
+            try doc.xmlData.write(to: url, options: NSData.WritingOptions.atomicWrite)
+        } catch {
+            print("Error \(error) writing XML data. Exiting.")
+        }
+    }
 }
 
 func main() {
@@ -151,28 +168,35 @@ func main() {
     
     let userTag = parsedArgs[.Tag] ?? "daily"
     
-    if let mode = parsedArgs[.Mode], mode == "fetch" {
-        
-        let minQueryInterval: Double = 300.0
-        let accessCache = UserDefaults.standard
+    switch parsedArgs[.Mode] {
 
-        /// Ensure we don't spam Pinboard with requests
-        if let lastCacheDate = accessCache.object(forKey: "lastCache") as? Date {
-            let delta = Date().timeIntervalSince(lastCacheDate)
-            if delta < minQueryInterval { print("Exceeded request quota. Next valid request in \(minQueryInterval-delta) seconds.") ; exit(0) }
+    /// This case fetches and then displays the fetched. No cache is used.
+    case .some("uncached"):
+        fetchWithQuota(tag: userTag, token: token ) { (alfredDoc: XMLDocument) in
+            
+            storeXml(in: alfredDoc, tag: userTag)
+            
+            print(alfredDoc.xmlString)
+            
+            exit(0)
         }
         
-        fetchBookmarks(with: userTag, token: token, mode: .silent)
-        
-        accessCache.setValue(Date(), forKey: "lastCache")
-        
-        /// This keeps the app running until fetchBookmarks exits explicitly.
-        CFRunLoopRun()
-    } else {
-        // But if we already have a cache, there's no need to display the bookmarks we fetch below.
+    /// This case updates the cache by fetching and saving without outputting. Can be slow.
+    case .some("fetch"):
+        fetchWithQuota(tag: userTag, token: token) { (alfredDoc: XMLDocument) in
+            
+            storeXml(in: alfredDoc, tag: userTag)
+            exit(0)
+        }
+    
+    /// This case displays any existing cache without fetching. This is fast.
+    case .some("display"):
+        // If we already have a cache, there's no need to display the bookmarks we fetch below.
          if let cachedXML = checkForCachedXML(URL(fileURLWithPath: NSTemporaryDirectory()+"cached\(userTag)XML.xml")) {
             print(cachedXML)
         }
+    default:
+        printUsage(error: "Unrecognized mode.")
     }
 }
 
