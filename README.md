@@ -22,7 +22,7 @@ Eg. the following script will do two things:
 * Fetch bookmarks with the "daily" tag and cache them without displaying any output.
 * Output the xml for any previously cached bookmarks with the "daily" tag. 
 
-This is done in two independent stages to ensure that there is no delay in displaying any existing bookmarks.
+This is done in two independent stages to ensure that there is no delay in displaying any existing bookmarks (HT [deanishe](https://github.com/deanishe))
 
 ```
 nohup /usr/local/bin/PinboardDailies --token=username:tokenstring --tag=daily --mode=fetch &> /dev/null &
