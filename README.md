@@ -36,7 +36,7 @@ This script will disregard any existing cache and will fetch and display the res
 /usr/local/bin/PinboardDailies --token=username:tokenstring--tag={query} --mode=uncached
 ```
 The scripts can either be called from an Alfred workflow or pasted in like so:
-![](alfredScript.jpg?raw=true "Screenshot of Alfred Script.")
+![](alfredScript.png?raw=true "Screenshot of Alfred Script.")
 
 You should end up with something like this:
 
