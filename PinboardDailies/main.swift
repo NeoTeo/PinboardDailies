@@ -27,10 +27,7 @@ func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocu
     let task = URLSession.shared.dataTask(with: request) {
         (data: Data?, response: URLResponse?, urlError: Error?) -> Void in
         
-        guard urlError == nil else {
-            print("Much error. Great bye. \(urlError)")
-            exit(-1)
-        }
+        if let err = urlError { fatalError("Much error. Great bye. \(err)") }
 
         // Parse the data into an array of string : anyobject dictionaries.
         let json    = try! JSONSerialization.jsonObject(with: data!, options: JSONSerialization.ReadingOptions.mutableContainers) as? [[String : AnyObject]]
