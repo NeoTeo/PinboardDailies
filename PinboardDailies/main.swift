@@ -94,7 +94,7 @@ func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocu
 func checkForCachedXML(_ cachedXMLURL: URL) -> XMLDocument? {
     
     do {
-        let cachedXML: XMLDocument? = try XMLDocument(contentsOf: cachedXMLURL, options: Int(XMLDocument.ContentKind.xml.rawValue))
+        let cachedXML: XMLDocument? = try XMLDocument(contentsOf: cachedXMLURL, options: XMLNode.Options(rawValue: XMLNode.Options.RawValue(Int(XMLDocument.ContentKind.xml.rawValue))))
         return cachedXML
         
     } catch {
