@@ -19,55 +19,73 @@ enum OutputMode: Int {
     case silent
 }
 
+struct PinboardEntry : Decodable {
+    var href: String
+    var description: String
+// Unused parts of the returned json.
+//    var extended: String
+//    var meta: String
+//    var hash: String
+//    var time: String
+//    var shared: String
+//    var toread: String
+//    var tags: String
+}
+
 func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocument) -> () ) {
 
     let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
     let request = URLRequest(url: url!)
 
+    let myDecoder = JSONDecoder()
+    
     let task = URLSession.shared.dataTask(with: request) {
         (data: Data?, response: URLResponse?, urlError: Error?) -> Void in
         
-        if let err = urlError { fatalError("Much error. Great bye. \(err)") }
+        guard urlError == nil else { fatalError("Much error. Great bye. \(String(describing: urlError))") }
+        guard let data = data else { fatalError("No data in received.") }
+        
+        do {
+            let pinboardEntries: [PinboardEntry] = try myDecoder.decode([PinboardEntry].self, from: data)
+        
+            let rootXML = XMLElement(name: "items")
+            
+            // traverse the data and turn it into an XML format Alfred understands.
+            for entry in pinboardEntries {
+                
+                let description = entry.description
+                let href = entry.href
+                
+                let childXML = XMLElement(name: "item")
+                
+                childXML.addAttribute(XMLNode.attribute(withName: "arg", stringValue: href) as! XMLNode)
+                childXML.addAttribute(XMLNode.attribute(withName: "valid", stringValue: "YES") as! XMLNode)
+                childXML.addAttribute(XMLNode.attribute(withName: "type", stringValue: "file") as! XMLNode)
+                
+                // Add the child to the root.
+                rootXML.addChild(childXML)
+                
+                var subChildXML = XMLElement(name: "subtitle", stringValue: href)
+                childXML.addChild(subChildXML)
+                
+                
+                subChildXML = XMLElement(name: "icon")
+                subChildXML.addAttribute(XMLNode.attribute(withName: "type", stringValue: "fileicon") as! XMLNode)
+                childXML.addChild(subChildXML)
+            
+                
+                subChildXML = XMLElement(name: "title", stringValue: description)
+                childXML.addChild(subChildXML)
+            }
+            
+            let alfredDoc               = XMLDocument(rootElement: rootXML)
+            alfredDoc.version           = "1.0"
+            alfredDoc.characterEncoding = "UTF-8"
+            
+            handler(alfredDoc)
+            
+        } catch { fatalError("fetchBookmarks could not decode the JSON. Exiting. \(error)") }
 
-        // Parse the data into an array of string : anyobject dictionaries.
-        let json    = try! JSONSerialization.jsonObject(with: data!, options: JSONSerialization.ReadingOptions.mutableContainers) as? [[String : AnyObject]]
-        let rootXML = XMLElement(name: "items")
-        
-        // traverse the data and turn it into an XML format Alfred understands.
-        for entry in json! {
-            
-            guard let description = entry["description"] as? String, let href = entry["href"] as? String
-            else { continue }
-            
-            let childXML = XMLElement(name: "item")
-            
-            childXML.addAttribute(XMLNode.attribute(withName: "arg"     , stringValue:   href) as! XMLNode)
-            childXML.addAttribute(XMLNode.attribute(withName: "valid"   , stringValue:  "YES") as! XMLNode)
-            childXML.addAttribute(XMLNode.attribute(withName: "type"    , stringValue: "file") as! XMLNode)
-            
-            // Add the child to the root.
-            rootXML.addChild(childXML)
-            
-            var subChildXML = XMLElement(name: "subtitle", stringValue: href)
-            childXML.addChild(subChildXML)
-            
-            
-            subChildXML = XMLElement(name: "icon")
-            subChildXML.addAttribute(XMLNode.attribute(withName: "type", stringValue: "fileicon") as! XMLNode)
-            childXML.addChild(subChildXML)
-        
-            
-            subChildXML = XMLElement(name: "title", stringValue: description)
-            childXML.addChild(subChildXML)
-            
-            
-        }
-        
-        let alfredDoc               = XMLDocument(rootElement: rootXML)
-        alfredDoc.version           = "1.0"
-        alfredDoc.characterEncoding = "UTF-8"
-        
-        handler(alfredDoc)
     }
     
     task.resume()
