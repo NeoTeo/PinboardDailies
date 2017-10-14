@@ -34,9 +34,9 @@ struct PinboardEntry : Decodable {
 
 // Takes a comma separated string of tags and returns a query string where each
 // tag is prepended with &tag=
-func makeMultiTagQuery(from tags: String) -> String {
+func makeMultiTagQuery(from tags: [String]) -> String {
     
-    let tags = tags.split(separator: ",")
+//    let tags = tags.split(separator: ",")
     var multiTags = ""
     for tag in tags {
         multiTags += "&tag=\(tag)"
@@ -45,10 +45,11 @@ func makeMultiTagQuery(from tags: String) -> String {
     return multiTags
 }
 
-func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocument) -> () ) {
-
+//func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocument) -> () ) {
+func fetchBookmarks(with tags: [String], token: String, handler: @escaping (XMLDocument) -> () ) {
+    
     // Format the tags correctly.
-    let tags    = makeMultiTagQuery(from: tag)
+    let tags    = makeMultiTagQuery(from: tags)
     let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)\(tags)&format=json")
     let request = URLRequest(url: url!)
 
@@ -106,19 +107,6 @@ func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocu
     task.resume()
 }
 
-func checkForCachedXML(_ cachedXMLURL: URL) -> XMLDocument? {
-    
-    do {
-        let cachedXML: XMLDocument? = try XMLDocument(contentsOf: cachedXMLURL, options: XMLNode.Options(rawValue: XMLNode.Options.RawValue(Int(XMLDocument.ContentKind.xml.rawValue))))
-        return cachedXML
-        
-    } catch {
-        print(error)
-        return nil
-    }
-}
-
-
 func parseArgs(args: [String]) -> [ArgType : String] {
 
     var parsedArgs = [ArgType : String]()
@@ -168,8 +156,8 @@ func printUsage(error: String) {
     print("Usage: pinboardDailies <--token=usertoken> [--mode=fetch|display|uncached] [--tag=sometag]")
 }
 
-func fetch(quota: Double, tag: String, token: String, handler: @escaping (XMLDocument)->()) {
-    
+//func fetch(quota: Double, tag: String, token: String, handler: @escaping (XMLDocument)->()) {
+func fetch(quota: Double, tags: [String], token: String, handler: @escaping (XMLDocument)->()) {
     /// set the query interval to five minutes 60*5 = 300
     let minQueryInterval: Double = quota//300.0
     let accessCache = UserDefaults.standard
@@ -180,7 +168,7 @@ func fetch(quota: Double, tag: String, token: String, handler: @escaping (XMLDoc
         if delta < minQueryInterval { print("Exceeded request quota. Next valid request in \(minQueryInterval-delta) seconds.") ; exit(0) }
     }
     
-    fetchBookmarks(with: tag, token: token, handler: handler)
+    fetchBookmarks(with: tags, token: token, handler: handler)
     
     accessCache.setValue(Date(), forKey: "lastCache")
     
@@ -188,6 +176,7 @@ func fetch(quota: Double, tag: String, token: String, handler: @escaping (XMLDoc
     CFRunLoopRun()
 }
 
+// XML store and load functions
 func storeXml(in doc: XMLDocument, tag: String) {
     // Write it out to disk
     if let url = URL(string: "file://"+NSTemporaryDirectory()+"cached\(tag)XML.xml") {
@@ -199,41 +188,61 @@ func storeXml(in doc: XMLDocument, tag: String) {
     }
 }
 
+func checkForCachedXML(_ cachedXMLURL: URL) -> XMLDocument? {
+    
+    do {
+        let cachedXML: XMLDocument? = try XMLDocument(contentsOf: cachedXMLURL, options: XMLNode.Options(rawValue: XMLNode.Options.RawValue(Int(XMLDocument.ContentKind.xml.rawValue))))
+        return cachedXML
+        
+    } catch {
+        print(error)
+        return nil
+    }
+}
+
 func main() {
     let argArray = CommandLine.arguments as [String]
     let parsedArgs = parseArgs(args: argArray)
     
     guard let token = parsedArgs[.Token] else { printUsage(error: "Missing token.") ; exit(-1) }
     
-    let userTag = parsedArgs[.Tag] ?? "daily"
+    //let userTag = parsedArgs[.Tag] ?? "daily"
+    let tagsString = parsedArgs[.Tag] ?? "daily"
+    let userTags = tagsString.components(separatedBy: ",")
+    
+    guard userTags.count < 4 else {
+        printUsage(error: "Maximum three tags supported")
+        return
+    }
+    
+    let joinedTags = userTags.joined(separator: "_")
     
     switch parsedArgs[.Mode] {
-
     /// This case fetches and then displays the fetched. No cache is used.
     case .some("uncached"):
-        fetch(quota: 0.5, tag: userTag, token: token ) { (alfredDoc: XMLDocument) in
+        fetch(quota: 0.5, tags: userTags, token: token ) { (alfredDoc: XMLDocument) in
             
-            storeXml(in: alfredDoc, tag: userTag)
-            
+            storeXml(in: alfredDoc, tag: joinedTags)
             print(alfredDoc.xmlString)
-            
             exit(0)
         }
         
     /// This case updates the cache by fetching and saving without outputting. Can be slow.
     case .some("fetch"):
-        fetch(quota: 300.0, tag: userTag, token: token) { (alfredDoc: XMLDocument) in
+        fetch(quota: 300.0, tags: userTags, token: token) { (alfredDoc: XMLDocument) in
             
-            storeXml(in: alfredDoc, tag: userTag)
+            storeXml(in: alfredDoc, tag: joinedTags)
             exit(0)
         }
     
     /// This case displays any existing cache without fetching. This is fast.
     case .some("display"):
+        
         // If we already have a cache, there's no need to display the bookmarks we fetch below.
-         if let cachedXML = checkForCachedXML(URL(fileURLWithPath: NSTemporaryDirectory()+"cached\(userTag)XML.xml")) {
+         if let cachedXML = checkForCachedXML(URL(fileURLWithPath: NSTemporaryDirectory()+"cached\(joinedTags)XML.xml")) {
             print(cachedXML)
         }
+        
     default:
         printUsage(error: "Unrecognized mode.")
     }
