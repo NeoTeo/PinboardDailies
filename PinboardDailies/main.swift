@@ -32,9 +32,24 @@ struct PinboardEntry : Decodable {
 //    var tags: String
 }
 
+// Takes a comma separated string of tags and returns a query string where each
+// tag is prepended with &tag=
+func makeMultiTagQuery(from tags: String) -> String {
+    
+    let tags = tags.split(separator: ",")
+    var multiTags = ""
+    for tag in tags {
+        multiTags += "&tag=\(tag)"
+    }
+    
+    return multiTags
+}
+
 func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocument) -> () ) {
 
-    let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tag)&format=json")
+    // Format the tags correctly.
+    let tags    = makeMultiTagQuery(from: tag)
+    let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)\(tags)&format=json")
     let request = URLRequest(url: url!)
 
     let myDecoder = JSONDecoder()
@@ -120,16 +135,25 @@ func parseArgs(args: [String]) -> [ArgType : String] {
         /// split the arg name from the value. 
         /// The requirement is that they are separated by =
         let keyVal = arg.components(separatedBy: "=")
-        guard keyVal.count == 2 else { printUsage(error: "Incorrect argument format.") ; exit(-1) }
+        guard keyVal.count == 2 else {
+            
+            printUsage(error: "Incorrect argument format.") ; exit(-1) }
         let val = keyVal[1]
         
         switch keyVal[0].lowercased() {
         case "--mode":
             parsedArgs[.Mode] = val
+            
         case "--tag":
-            parsedArgs[.Tag] = val
+            // To deal with multiple tag args we build it here as a comma separated string.
+            // We will deal with building a proper query from it in the query method.
+            var tmpTagString = parsedArgs[.Tag] ?? ""
+            tmpTagString += val
+            parsedArgs[.Tag] = tmpTagString
+            
         case "--token":
             parsedArgs[.Token] = val
+            
         default:
             printUsage(error: "Argument parse error.")
             exit(-1)
