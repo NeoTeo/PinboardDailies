@@ -9,7 +9,7 @@ Although the utility defaults to your dailies it will take any tag as an argumen
 
 ## Usage
 
-./PinboardDailies <--token="Your Pinboard token"> [--tag="Tag name"] [--mode=fetch|display|uncached] 
+./PinboardDailies <--token="Your Pinboard token"> [--tag="Tag1 name"] [--tag="Tag2 name"] [--mode=fetch|display|uncached] 
 
 which will output any found bookmarks in an xml format that Alfred's script filter understands.
 
