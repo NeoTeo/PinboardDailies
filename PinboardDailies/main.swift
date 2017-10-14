@@ -32,25 +32,11 @@ struct PinboardEntry : Decodable {
 //    var tags: String
 }
 
-// Takes a comma separated string of tags and returns a query string where each
-// tag is prepended with &tag=
-func makeMultiTagQuery(from tags: [String]) -> String {
-    
-//    let tags = tags.split(separator: ",")
-    var multiTags = ""
-    for tag in tags {
-        multiTags += "&tag=\(tag)"
-    }
-    
-    return multiTags
-}
-
-//func fetchBookmarks(with tag: String, token: String, handler: @escaping (XMLDocument) -> () ) {
 func fetchBookmarks(with tags: [String], token: String, handler: @escaping (XMLDocument) -> () ) {
     
     // Format the tags correctly.
-    let tags    = makeMultiTagQuery(from: tags)
-    let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)\(tags)&format=json")
+    let tags    = tags.joined(separator: "+")
+    let url     = URL(string: "https://api.pinboard.in/v1/posts/all?auth_token=\(token)&tag=\(tags)&format=json")
     let request = URLRequest(url: url!)
 
     let myDecoder = JSONDecoder()
@@ -156,7 +142,6 @@ func printUsage(error: String) {
     print("Usage: pinboardDailies <--token=usertoken> [--mode=fetch|display|uncached] [--tag=sometag]")
 }
 
-//func fetch(quota: Double, tag: String, token: String, handler: @escaping (XMLDocument)->()) {
 func fetch(quota: Double, tags: [String], token: String, handler: @escaping (XMLDocument)->()) {
     /// set the query interval to five minutes 60*5 = 300
     let minQueryInterval: Double = quota//300.0
