@@ -42,3 +42,5 @@ You should end up with something like this:
 
 ![](ShowPD.gif?raw=true "Screenshot of Alfred showing Pinboard Dailies.")
 ![](ShowPB.gif?raw=true "Screenshot of Alfred showing Pinboard tag search.")
+
+<Note: Filter by multiple tags by comma separating them.>
